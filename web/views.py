@@ -98,15 +98,67 @@ def create_annotation_job_request():
   # Parse redirect URL query parameters for S3 object info
   bucket_name = request.args.get('bucket')
   s3_key = request.args.get('key')
-
+  print("--------------------------------------------------------")
+  print(bucket_name)
+  print(s3_key)
   # Extract the job ID from the S3 key
+  index1 = s3_key.find('/')
+  index2 = s3_key.find('~')
+  index3 = s3_key[index1+1 : index2].find('/') + index1 + 1
+  job_id = s3_key[index3+1 : index2]
+  file_name = s3_key[index2+1 : ]
+  user_id = session.get('primary_identity')
+  submit_time = int(time.time())
+  print(job_id)
+  print(file_name)
+  print(user_id)
   # Move your code here
 
   # Persist job to database
+  data = { "job_id": job_id,
+          "user_id": user_id,
+          "input_file_name": file_name,
+          "s3_inputs_bucket": bucket_name,
+          "s3_key_input_file": s3_key,
+          "submit_time": submit_time,
+          "job_status": "PENDING"
+        }
+  # ref: https://boto3.amazonaws.com/v1/documentation/api/latest/guide/dynamodb.html -> Creating a new item
+  dynamodb = boto3.resource('dynamodb', region_name=app.config['AWS_REGION_NAME'], config=Config(signature_version='s3v4'))
+  table_name = app.config['AWS_DYNAMODB_ANNOTATIONS_TABLE']
+  table = dynamodb.Table(table_name)
+
+  #Erro handling: adding item to  DynamoDB
+  try:
+    table.put_item(Item = data)
+  except botocore.exceptions.ClientError as error:
+    response_body = {
+      "code": 500,
+      "data":{
+        "status":"error",
+        "message":error
+      }
+    }
+    return response_body, 500
+
   # Move your code here...
 
   # Send message to request queue
   # Move your code here...
+  # ref: https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/sns.html#SNS.Client.publish
+  # Open a connection to the S3 service
+  client = boto3.client('sns', 
+  region_name=app.config['AWS_REGION_NAME'], 
+  config=Config(signature_version='s3v4'))
+  
+  tpic_arn = app.config['AWS_SNS_JOB_REQUEST_TOPIC']
+  print(tpic_arn)
+  response = client.publish(
+    TopicArn = tpic_arn,
+    Message = json.dumps(data)
+  )
+  print('--------------------response--------------------')
+  print(response)
 
   return render_template('annotate_confirm.html', job_id=job_id)
 
