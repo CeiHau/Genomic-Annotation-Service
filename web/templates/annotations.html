@@ -21,6 +21,31 @@ University of Chicago
     </div>
 
     <!-- DISPLAY LIST OF ANNOTATION JOBS -->
+    <table class = 'table' align="left" sytle="width:100%">
+      <tr>
+        <th > Request ID </th>
+        <th > Request Time </th>
+        <th > VCF File Name</th>
+        <th > Status </th>
+      </tr>
+      {% for annotation in annotations %}
+        <tr>
+          <td> <a href= "{{annotation['redirect_url']}}" >{{annotation['job_id'] }}</a> </td>
+          <!-- <td> <button type="button" class="btn btn-lg btn-link">{{annotations[0]['job_id'] }}</button> </td> -->
+          <td>{{annotation['submit_time']}} </td>
+          <td>{{annotation['input_file_name']}} </td>
+          <td>{{annotation['status']}} </td>
+        </tr>
+      {% endfor %}
+      <!-- {% for annotation in annotations %}
+        <tr>
+          {% for key in annotation %}
+            <td> {{annotation[key]    }} </td>
+          {% endfor %}
+        </tr> 
+      {% endfor %} -->
+    <table>
+    <!-- <p>dsa{{ annotations }}.</p> -->
 
   </div> <!-- container -->
 {% endblock %}
