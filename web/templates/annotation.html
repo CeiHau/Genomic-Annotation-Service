@@ -14,9 +14,44 @@ University of Chicago
     </div>
 
     <!-- DISPLAY ANNOTATION JOB DETAILS -->
+    
+    <div>
+      <label for="primary_identity">Request ID:</label>
+      <span> {{annotation['job_id']}}</span>
+    </div>
+    <div>
+    <label for="primary_identity">Request Time:</label>
+    <span> {{annotation['submit_time']}}</span>
+    </div>
+    <div>
+      <label for="primary_identity">VCF Input File:</label>
+      <span> {{annotation['input_file_name']}} </span>
+    </div>
+    <div>
+      <label for="primary_identity">Status:</label>
+      <span> {{annotation['job_status']}} </span>
+    </div>
+    {% if annotation['job_status'] == 'COMPLETED' %}
+      <div>
+        <label for="primary_identity">Complete Time:</label>
+        <span> {{annotation['complete_time']}} </span>
+      </div>
+      
+      <div class = 'page-header'>
+        <p> </p>
+      </div>
 
+      <div>
+        <label for="primary_identity">Annotated Results File:</label>
+        <span> <a href = "{{annotation['response_vcf']}}"> download </a> </span>
+      </div>
+      <div>
+        <label for="primary_identity">Annotation Log File:</label>
+        <span><a href = " {{annotation['response_log']}}"> view </a> </span>
+      </div>
+    {% endif %}
     <hr />
     <a href="{{ url_for('annotations_list') }}">&larr; back to annotations list</a>
-
+  
   </div> <!-- container -->
 {% endblock %}

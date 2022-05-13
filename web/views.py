@@ -15,7 +15,7 @@ from datetime import datetime
 
 import boto3
 from botocore.client import Config
-from boto3.dynamodb.conditions import Key
+from boto3.dynamodb.conditions import Key, Attr 
 from botocore.exceptions import ClientError
 
 from flask import (abort, flash, redirect, render_template, 
@@ -98,9 +98,7 @@ def create_annotation_job_request():
   # Parse redirect URL query parameters for S3 object info
   bucket_name = request.args.get('bucket')
   s3_key = request.args.get('key')
-  print("--------------------------------------------------------")
-  print(bucket_name)
-  print(s3_key)
+
   # Extract the job ID from the S3 key
   index1 = s3_key.find('/')
   index2 = s3_key.find('~')
@@ -109,10 +107,6 @@ def create_annotation_job_request():
   file_name = s3_key[index2+1 : ]
   user_id = session.get('primary_identity')
   submit_time = int(time.time())
-  print(job_id)
-  print(file_name)
-  print(user_id)
-  # Move your code here
 
   # Persist job to database
   data = { "job_id": job_id,
@@ -141,8 +135,6 @@ def create_annotation_job_request():
     }
     return response_body, 500
 
-  # Move your code here...
-
   # Send message to request queue
   # Move your code here...
   # ref: https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/sns.html#SNS.Client.publish
@@ -168,10 +160,34 @@ def create_annotation_job_request():
 @app.route('/annotations', methods=['GET'])
 @authenticated
 def annotations_list():
+  print(request.url)
+  # Open a connection to the DynamoDB service
+  dynamodb = boto3.resource('dynamodb', region_name=app.config['AWS_REGION_NAME'], config=Config(signature_version='s3v4'))
+  table_name = app.config['AWS_DYNAMODB_ANNOTATIONS_TABLE']
+  table = dynamodb.Table(table_name)
 
+  # Query the table
+  # ref: https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/getting-started-step-7.html
+  user_id = session['primary_identity']
+  response = table.query(
+    IndexName = 'user_id_index',
+    KeyConditionExpression = Key('user_id').eq(user_id)
+    )
+    
   # Get list of annotations to display
-  
-  return render_template('annotations.html', annotations=None)
+  ann_lst = []
+  for item in response['Items']:
+    ann = {}
+    ann['job_id'] = item['job_id']
+    submit_time = item['submit_time']
+    ann['input_file_name'] = item['input_file_name']
+    ann['status'] = item['job_status']
+    ann['submit_time'] = time.strftime('%Y-%m-%d %H:%M', time.localtime(submit_time))
+    ann['redirect_url']  = request.url + '/' + ann['job_id']
+    ann_lst.append(ann)
+  print('-----------ann_lst---------')
+  print(len(ann_lst))
+  return render_template('annotations.html', annotations=ann_lst)
 
 
 """Display details of a specific annotation job
@@ -179,16 +195,77 @@ def annotations_list():
 @app.route('/annotations/<id>', methods=['GET'])
 @authenticated
 def annotation_details(id):
-  pass
+  # Open a connection to the DynamoDB service
+  dynamodb = boto3.resource('dynamodb', region_name=app.config['AWS_REGION_NAME'], config=Config(signature_version='s3v4'))
+  table_name = app.config['AWS_DYNAMODB_ANNOTATIONS_TABLE']
+  table = dynamodb.Table(table_name)
 
+  # Retrieve job information from the annotations database by id
+  # ref: https://boto3.amazonaws.com/v1/documentation/api/latest/guide/dynamodb.html
+  response = table.get_item(
+    Key={
+        'job_id': id,
+    }
+  )
+  item = response['Item']
+  user_id = session['primary_identity']
+  if user_id != item['user_id']:
+    abort(403)
+  # Open a connection to the S3 service
+  s3_client = boto3.client('s3', region_name=app.config['AWS_REGION_NAME'], config=Config(signature_version='s3v4'))
+  bucket_name = app.config['AWS_S3_RESULTS_BUCKET']
+  
+  vcf_key_name = app.config['AWS_S3_KEY_PREFIX'] + user_id + '/' + item['job_id'] + '~'  + item['input_file_name'][:-3] + "annot.vcf"
+
+  # Generate a presigned URL for the S3 object
+  # ref: https://boto3.amazonaws.com/v1/documentation/api/latest/guide/s3-presigned-urls.html
+  try:
+    response_vcf = s3_client.generate_presigned_url(
+      'get_object',
+      Params={'Bucket': bucket_name,'Key': vcf_key_name},
+      ExpiresIn=60)
+  except ClientError as e:
+    app.logger.error(f'Unable to generate presigned URL for download: {e}')
+    return abort(500)
+    
+  item['submit_time'] = time.strftime('%Y-%m-%d %H:%M', time.localtime(item['submit_time']))
+  if item['job_status'] == 'COMPLETED':
+    item['complete_time'] = time.strftime('%Y-%m-%d %H:%M', time.localtime(item['complete_time']))
+    item['response_vcf'] = response_vcf                                             
+    item['response_log'] = request.url + '/' + 'log'
+
+  return render_template('annotation.html', annotation = item)
 
 """Display the log file contents for an annotation job
 """
 @app.route('/annotations/<id>/log', methods=['GET'])
 @authenticated
 def annotation_log(id):
-  pass
+  # Open a connection to the DynamoDB service
+  dynamodb = boto3.resource('dynamodb', region_name=app.config['AWS_REGION_NAME'], config=Config(signature_version='s3v4'))
+  table_name = app.config['AWS_DYNAMODB_ANNOTATIONS_TABLE']
+  table = dynamodb.Table(table_name)
 
+  # Retrieve job information from the annotations database by id
+  # ref: https://boto3.amazonaws.com/v1/documentation/api/latest/guide/dynamodb.html
+  response = table.get_item(
+    Key={
+        'job_id': id,
+    }
+  )
+  item = response['Item']
+
+  # Open a connection to the S3 service
+  s3_client = boto3.client('s3', region_name=app.config['AWS_REGION_NAME'], config=Config(signature_version='s3v4'))
+  bucket_name = app.config['AWS_S3_RESULTS_BUCKET']
+  user_id = session['primary_identity']
+  log_key_name = app.config['AWS_S3_KEY_PREFIX'] + user_id + '/' + item['job_id'] + '~' + item['input_file_name'] + ".count.log"
+  
+  obj = s3_client.get_object(Bucket = bucket_name, Key = log_key_name)
+  file_body = obj['Body'].read() 
+  contents = file_body.decode('utf-8')
+  print(contents)
+  return render_template('view_log.html', job_id = id, log_file = contents) 
 
 """Subscription management handler
 """
