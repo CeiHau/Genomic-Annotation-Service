@@ -18,7 +18,9 @@ table_name = config['dynamodb']['TABLENAME']
 sqs = boto3.client('sqs', region_name = region_name)
 # Get configuration
 
-
+base_path = '/home/ubuntu/gas/ann/data'
+if not os.path.exists(base_path):
+    os.makedirs(base_path)
 
 # Poll the message queue in a loop 
 while True:
@@ -56,8 +58,13 @@ while True:
         # Include below the same code you used in prior homework
         # Get the input file S3 object and copy it to a local file: https://boto3.amazonaws.com/v1/documentation/api/1.9.42/guide/s3-example-download-file.html
         s3 = boto3.resource('s3',region_name = region_name, config = botocore.client.Config(signature_version = 's3v4'))
+        
+        new_path = base_path +'/' + job_id
+        if not os.path.exists(new_path):
+            os.makedirs(new_path)
+            
         try:
-            s3.Bucket(bucket_name).download_file(key, '/home/ubuntu/gas/ann/data/' + file_name)
+            s3.Bucket(bucket_name).download_file(key, new_path +'/' + file_name)
             print("Downloading...")
         except botocore.exceptions.ClientError as e:
             if e.response['Error']['Code'] == "404":
@@ -65,12 +72,10 @@ while True:
             else:
                 raise(e)
 
-        file_path = "/home/ubuntu/gas/ann/data/" + file_name
-
         # Launch annotation job as a background process with erro handling
         try:
         # https://stackoverflow.com/questions/4856583/how-do-i-pipe-a-subprocess-call-to-a-text-file save the stdout to file
-            job = subprocess.Popen(["python", "/home/ubuntu/gas/ann/run.py", file_path, job_id, user_id])
+            job = subprocess.Popen(["python", "/home/ubuntu/gas/ann/run.py", new_path +'/' + file_name, job_id, user_id])
             print("Luach annotation job")
         except subprocess.CalledProcessError:
             response_data = {
