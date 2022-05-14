@@ -144,13 +144,10 @@ def create_annotation_job_request():
   config=Config(signature_version='s3v4'))
   
   tpic_arn = app.config['AWS_SNS_JOB_REQUEST_TOPIC']
-  print(tpic_arn)
   response = client.publish(
     TopicArn = tpic_arn,
     Message = json.dumps(data)
   )
-  print('--------------------response--------------------')
-  print(response)
 
   return render_template('annotate_confirm.html', job_id=job_id)
 
@@ -160,7 +157,6 @@ def create_annotation_job_request():
 @app.route('/annotations', methods=['GET'])
 @authenticated
 def annotations_list():
-  print(request.url)
   # Open a connection to the DynamoDB service
   dynamodb = boto3.resource('dynamodb', region_name=app.config['AWS_REGION_NAME'], config=Config(signature_version='s3v4'))
   table_name = app.config['AWS_DYNAMODB_ANNOTATIONS_TABLE']
@@ -185,8 +181,6 @@ def annotations_list():
     ann['submit_time'] = time.strftime('%Y-%m-%d %H:%M', time.localtime(submit_time))
     ann['redirect_url']  = request.url + '/' + ann['job_id']
     ann_lst.append(ann)
-  print('-----------ann_lst---------')
-  print(len(ann_lst))
   return render_template('annotations.html', annotations=ann_lst)
 
 
@@ -208,6 +202,7 @@ def annotation_details(id):
     }
   )
   item = response['Item']
+  print(item)
   user_id = session['primary_identity']
   if user_id != item['user_id']:
     abort(403)
@@ -216,19 +211,33 @@ def annotation_details(id):
   bucket_name = app.config['AWS_S3_RESULTS_BUCKET']
   
   vcf_key_name = app.config['AWS_S3_KEY_PREFIX'] + user_id + '/' + item['job_id'] + '~'  + item['input_file_name'][:-3] + "annot.vcf"
-
-  # Generate a presigned URL for the S3 object
+  print(vcf_key_name)
+  # Generate presigned URL for the S3 object
   # ref: https://boto3.amazonaws.com/v1/documentation/api/latest/guide/s3-presigned-urls.html
   try:
     response_vcf = s3_client.generate_presigned_url(
       'get_object',
-      Params={'Bucket': bucket_name,'Key': vcf_key_name},
+      Params={'Bucket': bucket_name, 'Key': vcf_key_name},
       ExpiresIn=60)
   except ClientError as e:
     app.logger.error(f'Unable to generate presigned URL for download: {e}')
     return abort(500)
-    
+  print(item['s3_key_input_file'])
+  try:
+    input_file_link = s3_client.generate_presigned_url(
+      'get_object',
+      Params={'Bucket': app.config['AWS_S3_INPUTS_BUCKET'],'Key': item['s3_key_input_file']},
+      ExpiresIn=60)
+  except ClientError as e:
+    app.logger.error(f'Unable to generate presigned URL for download: {e}')
+    return abort(500)
+  print()
+  print(response_vcf)
+  print()
+  print(input_file_link)
+
   item['submit_time'] = time.strftime('%Y-%m-%d %H:%M', time.localtime(item['submit_time']))
+  item['input_file_link'] = input_file_link
   if item['job_status'] == 'COMPLETED':
     item['complete_time'] = time.strftime('%Y-%m-%d %H:%M', time.localtime(item['complete_time']))
     item['response_vcf'] = response_vcf                                             
@@ -264,7 +273,6 @@ def annotation_log(id):
   obj = s3_client.get_object(Bucket = bucket_name, Key = log_key_name)
   file_body = obj['Body'].read() 
   contents = file_body.decode('utf-8')
-  print(contents)
   return render_template('view_log.html', job_id = id, log_file = contents) 
 
 """Subscription management handler
