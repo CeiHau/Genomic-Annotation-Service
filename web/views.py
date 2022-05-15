@@ -24,6 +24,8 @@ from flask import (abort, flash, redirect, render_template,
 from app import app, db
 from decorators import authenticated, is_premium
 
+from auth import get_profile
+
 """Start annotation request
 Create the required AWS S3 policy document and render a form for
 uploading an annotation input file using the policy document
@@ -142,7 +144,9 @@ def create_annotation_job_request():
   client = boto3.client('sns', 
   region_name=app.config['AWS_REGION_NAME'], 
   config=Config(signature_version='s3v4'))
-  
+  profile = get_profile(identity_id = user_id)
+  print(profile.email)
+  data['email'] = profile.email
   tpic_arn = app.config['AWS_SNS_JOB_REQUEST_TOPIC']
   response = client.publish(
     TopicArn = tpic_arn,
