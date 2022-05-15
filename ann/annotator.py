@@ -54,7 +54,8 @@ while True:
         bucket_name = Message['s3_inputs_bucket']
         file_name = Message['input_file_name']
         key = Message['s3_key_input_file']
-
+        email = Message['email']
+        
         # Include below the same code you used in prior homework
         # Get the input file S3 object and copy it to a local file: https://boto3.amazonaws.com/v1/documentation/api/1.9.42/guide/s3-example-download-file.html
         s3 = boto3.resource('s3',region_name = region_name, config = botocore.client.Config(signature_version = 's3v4'))
@@ -75,7 +76,7 @@ while True:
         # Launch annotation job as a background process with erro handling
         try:
         # https://stackoverflow.com/questions/4856583/how-do-i-pipe-a-subprocess-call-to-a-text-file save the stdout to file
-            job = subprocess.Popen(["python", "/home/ubuntu/gas/ann/run.py", new_path +'/' + file_name, job_id, user_id])
+            job = subprocess.Popen(["python", "/home/ubuntu/gas/ann/run.py", new_path +'/' + file_name, job_id, user_id, email])
             print("Luach annotation job")
         except subprocess.CalledProcessError:
             response_data = {
@@ -87,7 +88,7 @@ while True:
             raise(response_data)     
 
         # Update the “job_status” key in the annotations DynamoDB table to “RUNNING” only if its current status is “PENDING” with erro handling
-        dynamodb = boto3.resource('dynamodb', region_name=region_name, config = botocore.client.Config(signature_version = 's3v4'))
+        dynamodb = boto3.resource('dynamodb', region_name = region_name, config = botocore.client.Config(signature_version = 's3v4'))
         table = dynamodb.Table(table_name)
         try:
             table.update_item(

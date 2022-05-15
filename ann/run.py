@@ -35,16 +35,6 @@ class Timer(object):
     if self.verbose:
       print(f"Approximate runtime: {self.secs:.2f} seconds")
 
-from flask import (flash, redirect, render_template, url_for,
-  request, session, abort)
-from app import app, db
-from decorators import authenticated
-from helpers import load_portal_client, get_safe_redirect
-from models import Profile
-def get_profile(identity_id=None):
-  return db.session.query(Profile).filter_by(identity_id=identity_id).first()
-
-
 # Get configuration
 from configparser import ConfigParser
 config = ConfigParser(os.environ)
@@ -62,6 +52,8 @@ if __name__ == '__main__':
         complete_time = int(time.time())
         job_id = sys.argv[2]
         user_id = sys.argv[3]
+        email = sys.argv[4]
+
         s3 = boto3.client('s3',region_name=region_name, config = botocore.client.Config(signature_version = 's3v4'))
         folder_name = os.path.dirname(sys.argv[1])
 
@@ -107,16 +99,14 @@ if __name__ == '__main__':
           TopicArn = tpic_arn,
           Message = json.dumps({
             "job_id":  job_id ,
-            "recipients":None,
+            "recipients":email,
             "complete_time": complete_time,
             "link": "https://wxh-a12-web.ucmpcs.org:4433/annotations" + '/' + job_id
           })
           )
         except botocore.exceptions.ClientError as error:
           print("Publish notification failed!", errro)
-        profile = get_profile(identity_id=user_id) 
-        print("---------------------------------------------------------------")
-        print(profile)
+       
 
     else:
         print("A valid .vcf file must be provided as input to this program.")
