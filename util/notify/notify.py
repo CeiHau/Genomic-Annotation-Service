@@ -58,9 +58,10 @@ def handle_results_queue(sqs=None):
     subject = "Results available for job " + Message['job_id']
     body =  "Your annotation job completed at " + compelete_time + ". " 
     body += "Click here to view job details and results: " + Message['link']
- 
+    recipients = Message['recipients']
+
     # Process message
-    send_response = helpers.send_email_ses(recipients="wxh@uchicago.edu", sender=None, subject = subject, body = body)
+    send_response = helpers.send_email_ses(recipients = recipients, sender=None, subject = subject, body = body)
     print(send_response)
 
     # Delete message
