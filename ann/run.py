@@ -40,7 +40,6 @@ from configparser import ConfigParser
 config = ConfigParser(os.environ)
 config.read('ann_config.ini')
 region_name = config['aws']['AwsRegionName']
-queue_url = config['sqs']['URL']
 table_name = config['dynamodb']['TABLENAME']
 tpic_arn = config['sns']['arn']
 
@@ -91,9 +90,8 @@ if __name__ == '__main__':
           print("Update DynamoDB failed!", error)
 
         # Publishes a notification to the SNS when job is completed
-        # Open a connection to the S3 service
+        # Open a connection to the SNS service
         client = boto3.client('sns', region_name = region_name, config=Config(signature_version='s3v4'))
-        json.dumps
         try:
           response = client.publish(
           TopicArn = tpic_arn,
@@ -101,7 +99,7 @@ if __name__ == '__main__':
             "job_id":  job_id ,
             "recipients":email,
             "complete_time": complete_time,
-            "link": "https://wxh-a12-web.ucmpcs.org:4433/annotations" + '/' + job_id
+            "link": "https://wxh-a13-web.ucmpcs.org:4433/annotations" + '/' + job_id
           })
           )
         except botocore.exceptions.ClientError as error:
