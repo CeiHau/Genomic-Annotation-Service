@@ -16,7 +16,6 @@ table_name = config['dynamodb']['TABLENAME']
 
 # Connect to SQS and get the message queue
 sqs = boto3.client('sqs', region_name = region_name)
-# Get configuration
 
 base_path = '/home/ubuntu/gas/ann/data'
 if not os.path.exists(base_path):
