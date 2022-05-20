@@ -43,7 +43,7 @@ def handle_results_queue(sqs=None):
     MessageAttributeNames=[
         'All'
     ],
-    WaitTimeSeconds=10
+    WaitTimeSeconds=20
   )
   # print(response)
   if 'Messages' in response:
