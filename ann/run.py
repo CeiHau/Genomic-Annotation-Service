@@ -96,10 +96,12 @@ if __name__ == '__main__':
           response = client.publish(
           TopicArn = tpic_arn,
           Message = json.dumps({
+            "user_id": user_id,
             "job_id":  job_id ,
+            "s3_key_result_file": s3_key_result_file,
             "recipients":email,
             "complete_time": complete_time,
-            "link": "https://wxh-a13-web.ucmpcs.org:4433/annotations" + '/' + job_id
+            "link": "https://wxh-a14-web.ucmpcs.org:4433/annotations" + '/' + job_id
           })
           )
         except botocore.exceptions.ClientError as error:

@@ -43,12 +43,6 @@ Updates the annotations database with the status of the request.
 '''
 @app.route('/process-job-request', methods=['GET', 'POST'])
 def annotate():
-  # print('-----------------------request.headers-----------------------  ')
-  # print(request.headers)
-  # print('-----------------------request.data-----------------------  ')
-  # print(json.loads(request.data.decode()))
-
-  # print(type(request.data.decode()))
   if (request.method == 'GET'):
     return jsonify({
       "code": 405, 

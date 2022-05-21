@@ -38,7 +38,7 @@ class Config(object):
   # AWS SQS queues
   AWS_SQS_WAIT_TIME = 20
   AWS_SQS_MAX_MESSAGES = 10
-  AWS_SQS_REQUESTS_QUEUE_URL = f"https://sqs.us-east-1.amazonaws.com/127134666975/{iam_username}_a13_job_requests"
+  AWS_SQS_REQUESTS_QUEUE_URL = f"https://sqs.us-east-1.amazonaws.com/127134666975/{iam_username}_a14_job_requests"
   # AWS DynamoDB
   AWS_DYNAMODB_ANNOTATIONS_TABLE = f"{iam_username}_annotations"
 
