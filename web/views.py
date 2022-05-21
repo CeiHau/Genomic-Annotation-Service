@@ -145,7 +145,6 @@ def create_annotation_job_request():
   region_name=app.config['AWS_REGION_NAME'], 
   config=Config(signature_version='s3v4'))
   profile = get_profile(identity_id = user_id)
-  print(profile.email)
   data['email'] = profile.email
   tpic_arn = app.config['AWS_SNS_JOB_REQUEST_TOPIC']
   response = client.publish(
@@ -207,6 +206,10 @@ def annotation_details(id):
   )
   item = response['Item']
   print(item)
+  # if 'results_file_archive_id' in item:
+  #   print("moved to archive")
+  # else:
+  #   print("keep the same")
   user_id = session['primary_identity']
   if user_id != item['user_id']:
     abort(403)
@@ -215,7 +218,6 @@ def annotation_details(id):
   bucket_name = app.config['AWS_S3_RESULTS_BUCKET']
   
   vcf_key_name = app.config['AWS_S3_KEY_PREFIX'] + user_id + '/' + item['job_id'] + '~'  + item['input_file_name'][:-3] + "annot.vcf"
-  print(vcf_key_name)
   # Generate presigned URL for the S3 object
   # ref: https://boto3.amazonaws.com/v1/documentation/api/latest/guide/s3-presigned-urls.html
   try:
@@ -226,7 +228,6 @@ def annotation_details(id):
   except ClientError as e:
     app.logger.error(f'Unable to generate presigned URL for download: {e}')
     return abort(500)
-  print(item['s3_key_input_file'])
   try:
     input_file_link = s3_client.generate_presigned_url(
       'get_object',
@@ -235,10 +236,7 @@ def annotation_details(id):
   except ClientError as e:
     app.logger.error(f'Unable to generate presigned URL for download: {e}')
     return abort(500)
-  print()
-  print(response_vcf)
-  print()
-  print(input_file_link)
+
 
   item['submit_time'] = time.strftime('%Y-%m-%d %H:%M', time.localtime(item['submit_time']))
   item['input_file_link'] = input_file_link
