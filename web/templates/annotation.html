@@ -44,7 +44,16 @@ University of Chicago
       <div>
         <label for="primary_identity">Annotated Results File:</label>
         {% if 'results_file_archive_id' in annotation %}
-          <span> file archived;<a href = "{{ url_for('make_me_premium')}}">  upgrade to restore </a> </span>
+          {% if 'archive_status' in annotation %}
+            {% if annotation['archive_status'] == 'InProgress' %}
+              <span> File is being restored; please check back later </span>
+            {% endif %}
+            {% if annotation['archive_status'] == 'Succeeded' %}
+              <span> <a href = "{{annotation['response_vcf']}}"> download </a> </span>
+            {% endif %}
+          {% else %}
+            <span> file archived;<a href = "{{ url_for('make_me_premium')}}">  upgrade to restore </a> </span>
+          {% endif %}
         {% else %}
           <span> <a href = "{{annotation['response_vcf']}}"> download </a> </span>
         {% endif %}

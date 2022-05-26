@@ -120,7 +120,9 @@ class Config(object):
 
   # AWS SNS topics
   AWS_SNS_JOB_REQUEST_TOPIC = \
-    f"arn:aws:sns:us-east-1:127134666975:{iam_username}_a14_job_requests"
+    f"arn:aws:sns:us-east-1:127134666975:{iam_username}_a16_job_requests"
+  AWS_SNS_THAW_REQUESTS_TOPIC = \
+    f"arn:aws:sns:us-east-1:127134666975:{iam_username}_a16_thaw_requests"
 
   # AWS SQS queues
   AWS_SQS_REQUESTS_QUEUE_NAME = ""

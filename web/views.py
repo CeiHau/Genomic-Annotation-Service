@@ -127,7 +127,7 @@ def create_annotation_job_request():
   #Erro handling: adding item to  DynamoDB
   try:
     table.put_item(Item = data)
-  except botocore.exceptions.ClientError as error:
+  except ClientError as error:
     response_body = {
       "code": 500,
       "data":{
@@ -142,8 +142,8 @@ def create_annotation_job_request():
   # ref: https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/sns.html#SNS.Client.publish
   # Open a connection to the S3 service
   client = boto3.client('sns', 
-  region_name=app.config['AWS_REGION_NAME'], 
-  config=Config(signature_version='s3v4'))
+    region_name=app.config['AWS_REGION_NAME'], 
+    config=Config(signature_version='s3v4'))
   profile = get_profile(identity_id = user_id)
   data['email'] = profile.email
   tpic_arn = app.config['AWS_SNS_JOB_REQUEST_TOPIC']
@@ -206,10 +206,6 @@ def annotation_details(id):
   )
   item = response['Item']
   print(item)
-  # if 'results_file_archive_id' in item:
-  #   print("moved to archive")
-  # else:
-  #   print("keep the same")
   user_id = session['primary_identity']
   if user_id != item['user_id']:
     abort(403)
@@ -242,7 +238,8 @@ def annotation_details(id):
   item['input_file_link'] = input_file_link
   if item['job_status'] == 'COMPLETED':
     item['complete_time'] = time.strftime('%Y-%m-%d %H:%M', time.localtime(item['complete_time']))
-    item['response_vcf'] = response_vcf                                             
+    item['response_vcf'] = response_vcf 
+    print(response_vcf)                                            
     item['response_log'] = request.url + '/' + 'log'
 
   return render_template('annotation.html', annotation = item)
@@ -253,7 +250,7 @@ def annotation_details(id):
 @authenticated
 def annotation_log(id):
   # Open a connection to the DynamoDB service
-  dynamodb = boto3.resource('dynamodb', region_name=app.config['AWS_REGION_NAME'], config=Config(signature_version='s3v4'))
+  dynamodb = boto3.resource('dynamodb', region_name=app.config['AWS_REGION_NAME'])
   table_name = app.config['AWS_DYNAMODB_ANNOTATIONS_TABLE']
   table = dynamodb.Table(table_name)
 
@@ -285,27 +282,61 @@ from auth import update_profile
 @app.route('/subscribe', methods=['GET', 'POST'])
 @authenticated
 def subscribe():
-  if (request.method == 'GET'):
-    # Display form to get subscriber credit card info
-    pass
-    
-  elif (request.method == 'POST'):
-    # Process the subscription request
 
-    # Create a customer on Stripe
+  # Update user role in accounts database
+  print(session['role'])
+  update_profile(
+    identity_id=session['primary_identity'],
+    role="premium_user"
+  )
 
-    # Subscribe customer to pricing plan
+  # Update role in the session
+  session['role'] = 'premium_user'
+  print(session['role'])
 
-    # Update user role in accounts database
+  # Open a connection to the DynamoDB service
+  dynamodb = boto3.resource('dynamodb', region_name = app.config['AWS_REGION_NAME'])
+  table_name = app.config['AWS_DYNAMODB_ANNOTATIONS_TABLE']
+  table = dynamodb.Table(table_name)
 
-    # Update role in the session
+  # Get the archive id of specific user’s archived job.
+  user_id = session['primary_identity']
+  query_result = table.query(
+    IndexName = 'user_id_index',
+    KeyConditionExpression = Key('user_id').eq(user_id),
+    FilterExpression=Attr('results_file_archive_id').exists()
+  )
 
-    # Request restoration of the user's data from Glacier
-    # ...add code here to initiate restoration of archived user data
-    # ...and make sure you handle files not yet archived!
+  archive_info_lst = []
+  for item in query_result['Items']:
+    info = {
+      'archive_id':item['results_file_archive_id'],
+      'job_id':item['job_id']
+    }
+    archive_info_lst.append(info)
 
-    # Display confirmation page
-    pass
+  # Publishes a notification to the SNS when job is completed
+  # Open a connection to the SNS service
+  client = boto3.client('sns', region_name =  app.config['AWS_REGION_NAME'])
+  try:
+    response = client.publish(
+      TopicArn = app.config['AWS_SNS_THAW_REQUESTS_TOPIC'],
+      Message = json.dumps({
+        'archive_info_lst': archive_info_lst
+      })
+    )
+    print(response)
+  except ClientError as error:
+    print("Publish notification failed!", errro)
+  # Request restoration of the user's data from Glacier
+  
+
+  # ...add code here to initiate restoration of archived user data
+  # ...and make sure you handle files not yet archived!
+  
+  # Display confirmation page
+  return render_template('subscribe_confirm.html', stripe_id="forced_upgrade")
+  pass
 
 
 """Set premium_user role
