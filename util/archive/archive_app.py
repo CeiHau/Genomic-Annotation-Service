@@ -21,7 +21,6 @@ app.config.from_object(environment)
 #  Get configuration
 region_name = app.config['AWS_REGION_NAME']
 table_name = app.config['AWS_DYNAMODB_ANNOTATIONS_TABLE']
-queue_url = app.config['AWS_SQS_REQUESTS_QUEUE_URL']
 bucket_name = app.config['AWS_S3_RESULTS_BUCKET']
 state_machine_arn = app.config['STATE_MACHINE_ARN']
 
@@ -31,8 +30,8 @@ import helpers
 
 @app.route('/', methods=['GET'])
 def home():
-  user_id = session['primary_identity']
-  print(user_id)
+  # user_id = session['primary_identity']
+  # print(user_id)
   return (f"This is the Archive utility: POST requests to /archive.")
 
 @app.route('/archive', methods=['POST'])
@@ -62,13 +61,14 @@ def archive_free_user_data():
       # For free user, move S3 object to glacier
       # Set the input
       input = json.dumps({
+        'user_id': user_id,
         'region_name' : region_name,
         'bukcet_name' : bucket_name,
         'job_id': job_id,
         's3_key_result_file': s3_key_result_file,
       })
       
-      # Open a connection to the S3 service
+      # Open a connection to the Step Functions service
       sfn_client = boto3.client('stepfunctions', region_name = region_name)
 
       # Execute step function
