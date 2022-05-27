@@ -309,13 +309,15 @@ def subscribe():
 
   archive_info_lst = []
   for item in query_result['Items']:
-    info = {
-      'archive_id':item['results_file_archive_id'],
-      'job_id':item['job_id']
-    }
-    archive_info_lst.append(info)
-
-  # Publishes a notification to the SNS when job is completed
+    # Make sure we have not already archive and we are not thawing the object 
+    if 'archive_status' not in item:
+      info = {
+        'archive_id':item['results_file_archive_id'],
+        'job_id':item['job_id']
+      }
+      archive_info_lst.append(info)
+  
+  # Request restoration of the user's data from Glacier
   # Open a connection to the SNS service
   client = boto3.client('sns', region_name =  app.config['AWS_REGION_NAME'])
   try:
@@ -328,7 +330,7 @@ def subscribe():
     print(response)
   except ClientError as error:
     print("Publish notification failed!", errro)
-  # Request restoration of the user's data from Glacier
+ 
   
 
   # ...add code here to initiate restoration of archived user data
