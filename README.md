@@ -6,7 +6,12 @@ Directory contents are as follows:
 * `/ann` - Annotator files
 * `/util` - Utility scripts/apps for notifications, archival, and restoration
 * `/aws` - AWS user data files
-
+## A16
+I implemented the data restoration with the following steps:
+* 1. Query archive id from the DynamoDB Table by user id with filer that ```results_file_archive_id``` attribute exist
+* 2. Check the archive status and include the archive id in the message, if it already archived or is thawing, then will not include the archive id in the message
+* 3. Sent message using SNS to thaw app post route ```/thaw```. In thaw app, open a connection to Glacier and use ```try```, ```except``` to try initiate **expedited** and **standard** job with parameter ```SNSTopic```. If the job finished, it will send a notification to SNS. Update the archive status in DynamoDB to ```InProgress```.
+* 4. Let the SNS be the trigger of ```restore``` lambda function. In the lambda function, get the job id from the ```event``` variable, get the output of the job as a streaming body by job id. Scan the DynamoDB with archive id, update the archive status to ```Succeeded``` and get the ```job_id```, ```s3_key_result_file```. Then restore the streaming body of the object to user's folder in gas-results S3 bucket by ```s3_key_result_file``` with ```job_id```. Then delete archive from Glacier.
 
 ## A14
 I use AWS Step Functions with AWS Lambda functions. <br>
