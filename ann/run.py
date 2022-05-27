@@ -101,7 +101,7 @@ if __name__ == '__main__':
             "s3_key_result_file": s3_key_result_file,
             "recipients":email,
             "complete_time": complete_time,
-            "link": "https://wxh-a14-web.ucmpcs.org:4433/annotations" + '/' + job_id
+            "link": "https://wxh-a16-web.ucmpcs.org:4433/annotations" + '/' + job_id
           })
           )
         except botocore.exceptions.ClientError as error:

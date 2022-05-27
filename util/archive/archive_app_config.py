@@ -32,13 +32,13 @@ class Config(object):
    # AWS SQS queues
   AWS_SQS_WAIT_TIME = 20
   AWS_SQS_MAX_MESSAGES = 10
-  AWS_SQS_REQUESTS_QUEUE_URL = f"https://sqs.us-east-1.amazonaws.com/127134666975/{iam_username}_a14_job_requests"
+  AWS_SQS_REQUESTS_QUEUE_URL = f"https://sqs.us-east-1.amazonaws.com/127134666975/{iam_username}_a16_job_requests"
   
    # AWS S3 upload parameters
   AWS_S3_INPUTS_BUCKET = "gas-inputs"
   AWS_S3_RESULTS_BUCKET = "gas-results"
 
   # AWS SNF 
-  STATE_MACHINE_ARN = f"arn:aws:states:us-east-1:127134666975:stateMachine:{iam_username}_a14_archive"
+  STATE_MACHINE_ARN = f"arn:aws:states:us-east-1:127134666975:stateMachine:{iam_username}_a16_archive"
 
 ### EOF
